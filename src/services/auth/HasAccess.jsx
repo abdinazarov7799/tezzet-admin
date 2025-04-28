@@ -14,7 +14,7 @@ export const hasAccess = (roleList = [], access = [],cant=[]) => {
             hasAccessToRole = false
         }
     })
-    return !hasAccessToRole;
+    return hasAccessToRole;
 }
 const HasAccess = ({
                        access = [],
