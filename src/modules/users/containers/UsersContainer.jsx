@@ -56,7 +56,7 @@ const UsersContainer = () => {
             title: t("Visitor"),
             dataIndex: "visitor",
             key: "visitor",
-            render: (props) => get(props,'phoneNumber')
+            render: (props) => get(props,'visitor.phoneNumber')
         },
         {
             title: t("Registered"),
