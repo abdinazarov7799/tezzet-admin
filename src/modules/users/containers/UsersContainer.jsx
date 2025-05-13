@@ -1,18 +1,23 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import Container from "../../../components/Container.jsx";
-import {Button, Input, Pagination, Popconfirm, Row, Space, Switch, Table} from "antd";
+import {Button, Input, Modal, Pagination, Popconfirm, Row, Select, Space, Switch, Table} from "antd";
 import {get} from "lodash";
 import {useTranslation} from "react-i18next";
 import usePaginateQuery from "../../../hooks/api/usePaginateQuery.js";
 import {KEYS} from "../../../constants/key.js";
 import {URLS} from "../../../constants/url.js";
-import {LockOutlined, UnlockOutlined} from "@ant-design/icons";
+import {EditOutlined, LockOutlined, UnlockOutlined} from "@ant-design/icons";
 import usePutQuery from "../../../hooks/api/usePutQuery.js";
+import useGetAllQuery from "../../../hooks/api/useGetAllQuery.js";
 
 const UsersContainer = () => {
     const {t} = useTranslation();
     const [page, setPage] = useState(0);
     const [searchKey,setSearchKey] = useState();
+    const [selected, setSelected] = useState(null);
+    const [selectedVisitor, setSelectedVisitor] = useState(null);
+    const [searchVisitor, setSearchVisitor] = useState(null);
+
     const {data,isLoading} = usePaginateQuery({
         key: KEYS.users_list,
         url: URLS.users_list,
@@ -25,10 +30,41 @@ const UsersContainer = () => {
         page
     });
 
+    const {data:users,isLoading:isLoadingUsers} = useGetAllQuery({
+        key: KEYS.users_list,
+        url: URLS.users_list,
+        params: {
+            params: {
+                size: 1000,
+                search: searchVisitor,
+            }
+        },
+        enabled: !!selected
+    })
+
+    useEffect(() => {
+        setSelectedVisitor(get(selected,'visitor.id'))
+    },[selected])
+
     const {mutate:block} = usePutQuery({listKeyId: KEYS.users_list})
+    const {mutate:edit} = usePutQuery({listKeyId: KEYS.users_list})
 
     const useBlock = (id,isBlock) => {
         block({url: `${URLS.user_block}/${id}?ban=${isBlock}`})
+    }
+
+    const options = Array.isArray(get(users,'data.content')) ?
+        get(users,'data.content')?.map((user) => ({label: get(user,'phoneNumber'), value: get(user,'id')}))
+        : [];
+
+    const editVisitor = () => {
+        edit({url: `${URLS.user_edit_visitor}/${get(selected,'id')}/${selectedVisitor}`},{
+            onSuccess: () => {
+                setSelected(null)
+                setSearchVisitor(null)
+                setSelectedVisitor(null)
+            }
+        })
     }
 
     const columns = [
@@ -57,6 +93,18 @@ const UsersContainer = () => {
             dataIndex: "visitor",
             key: "visitor",
             render: (props) => get(props,'phoneNumber')
+        },
+        {
+            title: t("Edit Visitor"),
+            key: "editVisitor",
+            width: 100,
+            render: (props) => {
+                return (
+                    <Button block icon={<EditOutlined />} onClick={() => {
+                        setSelected(props)
+                    }} />
+                )
+            }
         },
         {
             title: t("Registered"),
@@ -138,6 +186,31 @@ const UsersContainer = () => {
                     />
                 </Row>
             </Space>
+
+            <Modal
+                title={t("Edit visitor")}
+                footer={null}
+                open={!!selected}
+                onCancel={() => setSelected(null)}
+            >
+                <Space direction={"vertical"} size={"middle"} style={{width:'100%'}}>
+                    <Select
+                        style={{width: "100%"}}
+                        options={options}
+                        onChange={(value) => setSelectedVisitor(value)}
+                        loading={isLoadingUsers}
+                        value={selectedVisitor}
+                        showSearch
+                        searchValue={searchVisitor}
+                        onSearch={value => setSearchVisitor(value)}
+                    />
+
+                    <Button type={"primary"} block onClick={editVisitor}>
+                        {t("Edit")}
+                    </Button>
+                </Space>
+
+            </Modal>
         </Container>
     );
 };
